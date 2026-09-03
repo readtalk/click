@@ -27,6 +27,41 @@ This template provides a minimal setup for building a React application with Typ
 
 Get started in minutes with local development or deploy directly via the Cloudflare dashboard. Perfect for building modern, performant web applications at the edge.
 
+```
+root/
+├── public/
+│   └── vite.svg
+│
+├── src/
+│   ├── react-app/                    ← Frontend (React)
+│   │   ├── assets/
+│   │   │   ├── Cloudflare_Logo.svg
+│   │   │   ├── hono.svg
+│   │   │   └── react.svg
+│   │   ├── App.css
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   ├── main.tsx
+│   │   └── vite-env.d.ts
+│   │
+│   └── worker/                       ← Backend (Cloudflare Worker)
+│       └── index.ts                  ← Entry point Hono
+│
+├── .gitignore
+├── eslint.config.js
+├── index.html
+├── package.json
+├── package-lock.json
+├── README.md
+├── tsconfig.json
+├── tsconfig.app.json
+├── tsconfig.node.json
+├── tsconfig.worker.json
+├── vite.config.ts
+├── worker-configuration.d.ts
+└── wrangler.json
+```
+
 <!-- dash-content-end -->
 
 ## Getting Started
