@@ -1,8 +1,8 @@
 {
 	"name": "click",
-	"description": "A template for building a React application with Vite, Hono, and Cloudflare Workers",
+	"description": "A for building a React application with Vite, Hono, and Cloudflare Workers",
 	"cloudflare": {
-		"label": "Vite React Template",
+		"label": "Vite React",
 		"products": [
 			"Workers"
 		],
