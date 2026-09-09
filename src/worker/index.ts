@@ -1,49 +1,39 @@
 import { issuer } from "@openauthjs/openauth"
 import { CloudflareStorage } from "@openauthjs/openauth/storage/cloudflare"
-import { CodeProvider } from "@openauthjs/openauth/provider/code"
-import { createClient } from "@openauthjs/openauth/client"
-import { subjects } from "../../subjects"
+import { subjects } from "../../subjects.js"
+import { PasswordProvider } from "@openauthjs/openauth/provider/password"
+import { PasswordUI } from "@openauthjs/openauth/ui/password"
 
-type Env = { AUTH_KV: KVNamespace; AUTH_DB: D1Database }
+interface Env { AUTH_KV: KVNamespace }
 
-function makeIssuer(env: Env) {
-  return issuer({
-    storage: CloudflareStorage({ namespace: env.AUTH_KV }),
-    subjects,
-    providers: {
-      code: CodeProvider({
-        sendCode: async (c, code) => console.log(c.email, code)
-      })
-    },
-    success: async (ctx, v) => ctx.subject("user", { id: v.claims.email })
-  })
+async function getUser(email: string) {
+  return "123" // atau email
 }
 
 export default {
-  async fetch(req: Request, env: Env, ctx: ExecutionContext) {
-    const url = new URL(req.url)
-
-    // /auth/* -> issuer
-    if (url.pathname.startsWith("/auth")) {
-      // strip /auth biar issuer ngira rootnya /auth
-      return makeIssuer(env).fetch(req, env, ctx)
-    }
-
-    // /api/me -> API yang baca ctx.subject
-    if (url.pathname === "/api/me") {
-      const client = createClient({
-        clientID: "react",
-        issuer: url.origin + "/auth"
-      })
-      const token = req.headers.get("Authorization")?.replace("Bearer ", "")
-      if (!token) return new Response("no token", { status: 401 })
-      
-      const verified = await client.verify(subjects, token)
-      if (verified.err) return new Response("unauthorized: " + verified.err.message, { status: 401 })
-      
-      return Response.json(verified.subject.properties)
-    }
-
-    return new Response("Not found", { status: 404 })
-  }
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    return issuer({
+      storage: CloudflareStorage({ 
+        namespace: env.AUTH_KV // <-- wrangler lo namanya AUTH_KV, bukan CloudflareAuthKV
+      }),
+      subjects,
+      providers: {
+        password: PasswordProvider(
+          PasswordUI({
+            sendCode: async (email, code) => {
+              console.log(email, code)
+            },
+          }),
+        ),
+      },
+      success: async (ctx, value) => {
+        if (value.provider === "password") {
+          return ctx.subject("user", {
+            id: await getUser(value.email),
+          })
+        }
+        throw new Error("Invalid provider")
+      },
+    }).fetch(request, env, ctx)
+  },
 }
