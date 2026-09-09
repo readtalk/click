@@ -12,7 +12,7 @@ export default function App() {
     if (uid && email) {
       localStorage.setItem("user_id", uid);
       localStorage.setItem("email", email);
-      window.history.replaceState({}, "", "/dashboard"); // bersihin url
+      window.history.replaceState({}, "", "/"); // bersihin url
     }
 
     const savedId = localStorage.getItem("user_id");
@@ -21,7 +21,7 @@ export default function App() {
   }, []);
 
   const login = () => {
-    const redirect = window.location.origin + "/dashboard";
+    const redirect = window.location.origin + "/";
     window.location.href = `/authorize?client_id=your-client-id&redirect_uri=${encodeURIComponent(redirect)}&response_type=code`;
   };
 
