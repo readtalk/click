@@ -1,4 +1,3 @@
-//
 import { useState } from "react"
 import { useAuth } from "./AuthContext"
 
@@ -7,7 +6,7 @@ function App() {
   const [status, setStatus] = useState("")
 
   async function callApi() {
-    const res = await fetch("http://click.readtalk.workers.dev/password/authorize", {
+    const res = await fetch("http://auth.readtalk.workers.dev/", {
       headers: {
         Authorization: `Bearer ${await auth.getToken()}`,
       },
