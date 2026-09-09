@@ -1,18 +1,39 @@
-import { useEffect, useState } from "react";
-import { client } from "./auth";
+import { useState } from "react"
+import { useAuth } from "./AuthContext"
 
-export default function App() {
-  const [user, setUser] = useState<{id: string} | null>(null);
+function App() {
+  const auth = useAuth()
+  const [status, setStatus] = useState("")
 
-  useEffect(() => {
-    fetch("/api/me").then(r => r.json()).then(d => setUser(d.user));
-  }, []);
+  async function callApi() {
+    const res = await fetch("http://localhost:3001/", {
+      headers: {
+        Authorization: `Bearer ${await auth.getToken()}`,
+      },
+    })
 
-  const login = async () => {
-    const { url } = await client.authorize(`${window.location.origin}/api/callback`, "code");
-    window.location.href = url;
-  };
+    setStatus(res.ok ? "success" : "error")
+  }
 
-  if (!user) return <button onClick={login}>Login</button>;
-  return <div>Login as: {user.id} — from ctx.subject("user", { id })</div>;
+  return !auth.loaded ? (
+    <div>Loading...</div>
+  ) : (
+    <div>
+      {auth.loggedIn ? (
+        <div>
+          <p>
+            <span>Logged in</span>
+            {auth.userId && <span> as {auth.userId}</span>}
+          </p>
+          {status !== "" && <p>API call: {status}</p>}
+          <button onClick={callApi}>Call API</button>
+          <button onClick={auth.logout}>Logout</button>
+        </div>
+      ) : (
+        <button onClick={auth.login}>Login with OAuth</button>
+      )}
+    </div>
+  )
 }
+
+export default App
