@@ -5,11 +5,23 @@
   "compatibility_date": "2025-10-08",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  "vars": {
+    "OPENAUTH_ISSUER": "https://auth.readtalk.workers.dev"
+  },
   "d1_databases": [
-    { "binding": "AUTH_DB", "database_id": "6f7f17e5-74a6-46a1-a424-a1e5b0cb7284", "database_name": "to-trust" }
+    {
+      "binding": "AUTH_DB",
+      "database_id": "6f7f17e5-74a6-46a1-a424-a1e5b0cb7284",
+      "database_name": "to-trust"
+    }
   ],
   "kv_namespaces": [
-    { "binding": "AUTH_KV", "id": "6ffcc61aed814e32b80e29c6fa5b44ee" }
+    {
+      "binding": "AUTH_KV",
+      "id": "6ffcc61aed814e32b80e29c6fa5b44ee"
+    }
   ],
-  "assets": { "directory": "./dist/client" }
+  "assets": {
+    "directory": "./dist/client"
+  }
 }
