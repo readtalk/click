@@ -6,7 +6,7 @@ function App() {
   const [status, setStatus] = useState("")
 
   async function callApi() {
-    const res = await fetch("https://auth.app-readtalk.workers.dev/", {
+    const res = await fetch("https://auth.app-readtalk.workers.dev", {
       headers: {
         Authorization: `Bearer ${await auth.getToken()}`,
       },
