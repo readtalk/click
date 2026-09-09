@@ -9,7 +9,7 @@ const subjects = createSubjects({
 
 const client = createClient({
   clientID: "vite",
-  issuer: "http://click.readtalk.workers.dev/password/authorize", // issuer lo
+  issuer: "http://click.readtalk.workers.dev/password/authorize",
 })
 
 type Auth = {
@@ -29,8 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    const init = async () => {
-      // 1. cek callback ?code=
+    const init = async () => {  
       const url = new URL(window.location.href)
       const code = url.searchParams.get("code")
       if (code) {
@@ -50,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!tokens?.access) return
     client.verify(subjects, tokens.access).then(v => {
-      setUserId(v.subject.properties.id) // ini ctx.subject dari index.ts
+      setUserId(v.subject.properties.id)
     }).catch(() => setUserId(null))
   }, [tokens])
 
