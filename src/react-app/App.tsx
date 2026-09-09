@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { createClient } from "@openauthjs/openauth/client"
+import "./App.css";
 
 const authClient = createClient({
   clientID: "vite-app",
-  issuer: "http://localhost:5173/auth" // dev, prod jadi /auth domain lo
+  issuer: "http://click.readtalk.workers.dev/auth"
 })
 
 function App() {
