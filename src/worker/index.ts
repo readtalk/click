@@ -18,12 +18,16 @@ const authHandler = (env: Env) => issuer({
   storage: CloudflareStorage({ namespace: env.AUTH_KV }),
   subjects,
   providers: {
-    password: PasswordProvider(PasswordUI({
-      sendCode: async (email, code) => {
-        console.log(`[AUTH] ${email} -> ${code}`);
-      },
-      copy: { input_code: "Code (cek wrangler tail)" }
-    })),
+    password: PasswordProvider(
+      PasswordUI({
+        sendCode: async (email, code) => {
+          console.log(`[AUTH] ${email} -> ${code}`);
+        },
+        copy: {
+          input_code: "Code (cek wrangler tail)",
+        },
+      })
+    ),
   },
   theme: {
     title: "ReadTalk Auth",
@@ -35,22 +39,49 @@ const authHandler = (env: Env) => issuer({
     },
   },
   success: async (ctx, value) => {
-    const r = await env.AUTH_DB.prepare(
+    const result = await env.AUTH_DB.prepare(
       `INSERT INTO user (email) VALUES (?) ON CONFLICT(email) DO UPDATE SET email=email RETURNING id`
-    ).bind(value.email).first<{id: string}>();
-    return ctx.subject("user", { id: r!.id });
-  }
+    ).bind(value.email).first<{ id: string }>();
+
+    if (!result) {
+      throw new Error(`Failed to create user: ${value.email}`);
+    }
+
+    // KAWIN SAMA App.tsx: redirect bawa ?user_id & ?email biar App.tsx bisa tangkep
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: `/dashboard?user_id=${result.id}&email=${encodeURIComponent(value.email)}`,
+      },
+    });
+  },
 });
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    // cuma route auth yang di-handle worker
-    if (url.pathname.startsWith("/authorize") || url.pathname.startsWith("/callback") || url.pathname.startsWith("/.well-known") || url.pathname.startsWith("/password") || url.pathname.startsWith("/api/auth")) {
+
+    if (url.pathname === "/logout") {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: "/",
+          "Set-Cookie": "session=; Max-Age=0; path=/",
+        },
+      });
+    }
+
+    if (
+      url.pathname.startsWith("/authorize") ||
+      url.pathname.startsWith("/callback") ||
+      url.pathname.startsWith("/.well-known") ||
+      url.pathname.startsWith("/password") ||
+      url.pathname.startsWith("/api/auth")
+    ) {
       return authHandler(env).fetch(request, env, ctx);
     }
-    // sisanya biarin Cloudflare yang serve dist/client (React)
-    // kalo pake vite plugin, return 404 biar assets fallback yang handle
+
+    // Biarin Cloudflare serve React (App.tsx)
     return new Response(null, { status: 404 });
-  }
+  },
 } satisfies ExportedHandler<Env>;
