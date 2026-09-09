@@ -10,7 +10,7 @@ import { createClient } from "@openauthjs/openauth/client"
 
 const client = createClient({
   clientID: "react",
-  issuer: "click.readtalk.workers.dev/password/authorize",
+  issuer: "https://auth.readtalk.workers.dev/",
 })
 
 interface AuthContextType {
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function user() {
-    const res = await fetch("https://click.readtalk.workers.dev/password/authorize", {
+    const res = await fetch("https://auth.readtalk.workers.dev/", {
       headers: {
         Authorization: `Bearer ${token.current}`,
       },
