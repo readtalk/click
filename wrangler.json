@@ -1,15 +1,15 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "click",
-	"main": "./src/worker/index.ts",
-	"compatibility_date": "2025-10-08",
-	"compatibility_flags": ["nodejs_compat"],
-	"observability": {
-		"enabled": true
-	},
-	"upload_source_maps": true,
-	"assets": {
-		"directory": "./dist/client",
-		"not_found_handling": "single-page-application"
-	}
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "click",
+  "main": "./src/worker/index.ts",
+  "compatibility_date": "2025-10-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "d1_databases": [
+    { "binding": "AUTH_DB", "database_id": "6f7f17e5-74a6-46a1-a424-a1e5b0cb7284", "database_name": "to-trust" }
+  ],
+  "kv_namespaces": [
+    { "binding": "AUTH_KV", "id": "6ffcc61aed814e32b80e29c6fa5b44ee" }
+  ],
+  "assets": { "directory": "./dist/client", "not_found_handling": "single-page-application" }
 }
