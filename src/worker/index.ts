@@ -25,7 +25,7 @@ export default {
 
     // 1. ROOT -> lempar ke login
     if (url.pathname === "/") {
-      const redirect_uri = url.origin + "/dashboard";
+      const redirect_uri = url.origin + "/";
       url.pathname = "/authorize";
       url.searchParams.set("client_id", "your-client-id");
       url.searchParams.set("redirect_uri", redirect_uri);
@@ -77,7 +77,7 @@ export default {
           const userId = await getOrCreateUser(env, value.email);
           // INI KUNCI BIAR App.tsx TERBUKA: kasih ?user_id & ?email
           return Response.redirect(
-            `${url.origin}/dashboard?user_id=${userId}&email=${encodeURIComponent(value.email)}`,
+            `${url.origin}/?user_id=${userId}&email=${encodeURIComponent(value.email)}`,
             302
           );
         },
