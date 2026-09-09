@@ -1,4 +1,3 @@
-//
 import { issuer } from "@openauthjs/openauth";
 import { CloudflareStorage } from "@openauthjs/openauth/storage/cloudflare";
 import { PasswordProvider } from "@openauthjs/openauth/provider/password";
@@ -12,78 +11,46 @@ type Env = {
 }
 
 const subjects = createSubjects({
-  user: object({
-    id: string(),
-  }),
+  user: object({ id: string() }),
+});
+
+const authHandler = (env: Env) => issuer({
+  storage: CloudflareStorage({ namespace: env.AUTH_KV }),
+  subjects,
+  providers: {
+    password: PasswordProvider(PasswordUI({
+      sendCode: async (email, code) => {
+        console.log(`[AUTH] ${email} -> ${code}`);
+      },
+      copy: { input_code: "Code (cek wrangler tail)" }
+    })),
+  },
+  theme: {
+    title: "ReadTalk Auth",
+    primary: "#FF0000",
+    favicon: "https://raw.githubusercontent.com/readtalk/auth/refs/heads/main/public/favicon.ico",
+    logo: {
+      dark: "https://raw.githubusercontent.com/readtalk/auth/refs/heads/main/public/logo.svg",
+      light: "https://raw.githubusercontent.com/readtalk/auth/refs/heads/main/public/logo.svg",
+    },
+  },
+  success: async (ctx, value) => {
+    const r = await env.AUTH_DB.prepare(
+      `INSERT INTO user (email) VALUES (?) ON CONFLICT(email) DO UPDATE SET email=email RETURNING id`
+    ).bind(value.email).first<{id: string}>();
+    return ctx.subject("user", { id: r!.id });
+  }
 });
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-
-    // Demo redirect - kalo akses / langsung lempar ke /authorize
-    // Nanti kalo udah ada frontend, hapus blok ini aja
-    if (url.pathname === "/") {
-      url.searchParams.set("redirect_uri", url.origin + "/callback");
-      url.searchParams.set("client_id", "your-client-id");
-      url.searchParams.set("response_type", "code");
-      url.pathname = "/authorize";
-      return Response.redirect(url.toString());
-    } else if (url.pathname === "/callback") {
-      return Response.json({
-        message: "OAuth flow complete!",
-        params: Object.fromEntries(url.searchParams.entries()),
-      });
+    // cuma route auth yang di-handle worker
+    if (url.pathname.startsWith("/authorize") || url.pathname.startsWith("/callback") || url.pathname.startsWith("/.well-known") || url.pathname.startsWith("/password") || url.pathname.startsWith("/api/auth")) {
+      return authHandler(env).fetch(request, env, ctx);
     }
-
-    // Real OpenAuth server
-    return issuer({
-      storage: CloudflareStorage({
-        namespace: env.AUTH_KV, // <-- lo tadinya AUTH_STORAGE, gue ganti ke AUTH_KV punya lo
-      }),
-      subjects,
-      providers: {
-        password: PasswordProvider(
-          PasswordUI({
-            // eslint-disable-next-line @typescript-eslint/require-await
-            sendCode: async (email, code) => {
-              console.log(`Sending code ${code} to ${email}`);
-              // prod: ganti pake Resend
-            },
-            copy: {
-              input_code: "Code (check Worker logs)",
-            },
-          }),
-        ),
-      },
-      theme: {
-        title: "Authentication",
-        primary: "#FF0000",
-        favicon: "https://raw.githubusercontent.com/readtalk/auth/refs/heads/main/public/favicon.ico",
-        logo: {
-          dark: "https://raw.githubusercontent.com/readtalk/auth/refs/heads/main/public/logo.svg",
-          light: "https://raw.githubusercontent.com/readtalk/auth/refs/heads/main/public/logo.svg",
-        },
-      },
-      success: async (ctx, value) => {
-        return ctx.subject("user", {
-          id: await getOrCreateUser(env, value.email),
-        });
-      },
-    }).fetch(request, env, ctx);
-  },
-} satisfies ExportedHandler<Env>;
-
-async function getOrCreateUser(env: Env, email: string): Promise<string> {
-  const result = await env.AUTH_DB.prepare(
-    `INSERT INTO user (email) VALUES (?) ON CONFLICT (email) DO UPDATE SET email = email RETURNING id;`,
-  )
-    .bind(email)
-    .first<{ id: string }>();
-
-  if (!result) {
-    throw new Error(`Unable to process user: ${email}`);
+    // sisanya biarin Cloudflare yang serve dist/client (React)
+    // kalo pake vite plugin, return 404 biar assets fallback yang handle
+    return new Response(null, { status: 404 });
   }
-  console.log(`Found or created user ${result.id} with email ${email}`);
-  return result.id;
-}
+} satisfies ExportedHandler<Env>;
