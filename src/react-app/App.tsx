@@ -1,66 +1,59 @@
-import { useState, useEffect } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import cloudflareLogo from "./assets/Cloudflare_Logo.svg";
-import honoLogo from "./assets/hono.svg";
-import "./App.css";
+import { useEffect, useState } from "react";
 
-function App() {
-  const [count, setCount] = useState(0);
-  const [callbackData, setCallbackData] = useState<any>(null);
+export default function App() {
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
 
-  // kalo abis login dari /callback, tangkep paramnya
   useEffect(() => {
-    const url = new URL(window.location.href);
-    if (url.pathname === "/callback") {
-      setCallbackData(Object.fromEntries(url.searchParams.entries()));
+    // tangkep ?user_id & ?email dari redirect OpenAuth (kayak dashboard.ts lo)
+    const q = new URLSearchParams(window.location.search);
+    const uid = q.get("user_id");
+    const email = q.get("email");
+
+    if (uid && email) {
+      localStorage.setItem("user_id", uid);
+      localStorage.setItem("email", email);
+      window.history.replaceState({}, "", "/dashboard"); // bersihin url
     }
+
+    const savedId = localStorage.getItem("user_id");
+    const savedEmail = localStorage.getItem("email");
+    if (savedId && savedEmail) setUser({ id: savedId, email: savedEmail });
   }, []);
 
   const login = () => {
-    const url = new URL(window.location.origin + "/authorize");
-    url.searchParams.set("client_id", "your-client-id");
-    url.searchParams.set("redirect_uri", window.location.origin + "/callback");
-    url.searchParams.set("response_type", "code");
-    window.location.href = url.toString();
+    const redirect = window.location.origin + "/dashboard";
+    window.location.href = `/authorize?client_id=your-client-id&redirect_uri=${encodeURIComponent(redirect)}&response_type=code`;
   };
 
-  if (callbackData) {
+  const logout = () => {
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("email");
+    window.location.href = "/";
+  };
+
+  // BELUM LOGIN
+  if (!user) {
     return (
-      <div style={{ padding: 40 }}>
-        <h1>OAuth flow complete! 🎉</h1>
-        <pre style={{ background: "#111", color: "#0f0", padding: 20, textAlign: "left" }}>
-          {JSON.stringify(callbackData, null, 2)}
-        </pre>
-        <button onClick={() => (window.location.href = "/")}>Back to Home</button>
+      <div style={{ maxWidth: 600, margin: "40px auto", textAlign: "center", fontFamily: "system-ui" }}>
+        <h1 style={{ color: "#ff0000" }}>READTalk Messenger</h1>
+        <button onClick={login} style={{ background: "#ff0000", color: "white", border: 0, padding: "12px 24px", borderRadius: 8, cursor: "pointer" }}>
+          Login with Email
+        </button>
       </div>
     );
   }
 
+  // UDAH LOGIN - sama kayak dashboard.ts lo
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank"><img src={viteLogo} className="logo" alt="Vite logo" /></a>
-        <a href="https://react.dev" target="_blank"><img src={reactLogo} className="logo react" alt="React logo" /></a>
-        <a href="https://hono.dev/" target="_blank"><img src={honoLogo} className="logo cloudflare" alt="Hono logo" /></a>
-        <a href="https://workers.cloudflare.com/" target="_blank"><img src={cloudflareLogo} className="logo cloudflare" alt="Cloudflare logo" /></a>
-      </div>
-      <h1>Vite + React + Hono + Cloudflare + OpenAuth</h1>
-      
-      <div className="card">
-        <button onClick={login} style={{ background: "#FF0000", color: "white", fontWeight: "bold" }}>
-          Login with OpenAuth
+    <div style={{ maxWidth: 600, margin: "40px auto", padding: 20, fontFamily: "system-ui" }}>
+      <div style={{ background: "white", padding: 30, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+        <h4>Form @username?</h4>
+        <div><b>Key ID:</b> {user.id}</div>
+        <div><b>Email:</b> {user.email}</div>
+        <button onClick={logout} style={{ background: "#ff0000", color: "white", border: 0, padding: "10px 24px", borderRadius: 8, marginTop: 20, cursor: "pointer" }}>
+          Logout
         </button>
-        <p>Code bakal muncul di `wrangler tail` / Dashboard Logs</p>
       </div>
-
-      <div className="card">
-        <button onClick={() => setCount((c) => c + 1)}>count is {count}</button>
-      </div>
-
-      <p className="read-the-docs">Worker: click.readtalk.workers.dev - D1: to-trust</p>
-    </>
+    </div>
   );
 }
-
-export default App;
