@@ -1,12 +1,18 @@
 import { Hono } from "hono";
-type Env = { AUTH_DB: D1Database, AUTH_KV: KVNamespace }
-const app = new Hono<{ Bindings: Env }>();
 
-app.post("/api/login", async (c) => {
-  const { email, password } = await c.req.json()
-  const user = await c.env.AUTH_DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first()
-  // cek password di sini
-  return c.json({ ok: true, user })
-})
+type Bindings = {
+  AUTH_DB: D1Database
+  AUTH_KV: KVNamespace
+}
+
+const app = new Hono<{ Bindings: Bindings }>();
+
+app.get("/api/", (c) => c.json({ name: "OpenAuth" }));
+
+app.get("/api/test", async (c) => {
+  // test D1 lu yang to-trust
+  const result = await c.env.AUTH_DB.prepare("SELECT count(*) as total FROM users").first();
+  return c.json({ ok: true, db: "to-trust", total: result });
+});
 
 export default app;
