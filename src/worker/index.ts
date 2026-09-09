@@ -1,18 +1,23 @@
-import { Hono } from "hono";
+import { Hono } from "hono"
+import { createAuth } from "./auth"
 
-type Bindings = {
+type Env = {
   AUTH_DB: D1Database
   AUTH_KV: KVNamespace
 }
 
-const app = new Hono<{ Bindings: Bindings }>();
+const app = new Hono<{ Bindings: Env }>()
 
-app.get("/api/", (c) => c.json({ name: "OpenAuth" }));
+// 1. AUTH ROUTES - harus paling atas
+app.all("/auth/*", async (c) => {
+  const auth = createAuth(c.env)
+  return auth.fetch(c.req.raw, c.env, c.executionCtx)
+})
 
-app.get("/api/test", async (c) => {
-  // test D1 lu yang to-trust
-  const result = await c.env.AUTH_DB.prepare("SELECT count(*) as total FROM users").first();
-  return c.json({ ok: true, db: "to-trust", total: result });
-});
+// 2. API lo
+app.get("/api/me", async (c) => {
+  // contoh cek session nanti disini
+  return c.json({ ok: true })
+})
 
-export default app;
+export default app
