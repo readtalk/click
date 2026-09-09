@@ -1,44 +1,18 @@
 import { useEffect, useState } from "react";
+import { client } from "./auth";
 
 export default function App() {
-  const [user, setUser] = useState<{id: string, email: string} | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<{id: string} | null>(null);
 
   useEffect(() => {
-    // kalo ada?code=, bersihin dulu (OpenAuth udah set cookie)
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("code")) {
-      window.history.replaceState({}, "", "/dashboard");
-    }
-    // fetch sejoli modern
-    fetch("/api/me", { credentials: "include" })
-     .then(r => r.json())
-     .then(d => {
-        if (d.id) {
-          localStorage.setItem("user_id", d.id);
-          localStorage.setItem("email", d.email);
-          setUser(d);
-        }
-      })
-     .finally(() => setLoading(false));
+    fetch("/api/me").then(r => r.json()).then(d => setUser(d.user));
   }, []);
 
-  const logout = () => {
-    localStorage.clear();
-    window.location.href = "/logout";
+  const login = async () => {
+    const { url } = await client.authorize(`${window.location.origin}/api/callback`, "code");
+    window.location.href = url;
   };
 
-  if (loading) return <div style={{textAlign:"center", marginTop:40}}>Loading...</div>;
-  if (!user) return <div style={{textAlign:"center", marginTop:40}}><a href="/">Login</a></div>;
-
-  return (
-    <div style={{maxWidth:600, margin:"40px auto"}}>
-      <div style={{background:"white", padding:30, borderRadius:12}}>
-        <h4>Form @username?</h4>
-        <div><b>Key ID:</b> {user.id}</div>
-        <div><b>Email:</b> {user.email}</div>
-        <button onClick={logout} style={{background:"#ff0000", color:"white", border:0, padding:"10px 24px", borderRadius:8, marginTop:20}}>Logout</button>
-      </div>
-    </div>
-  );
+  if (!user) return <button onClick={login}>Login</button>;
+  return <div>Login as: {user.id} — from ctx.subject("user", { id })</div>;
 }
