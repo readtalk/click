@@ -11,5 +11,5 @@
   "kv_namespaces": [
     { "binding": "AUTH_KV", "id": "6ffcc61aed814e32b80e29c6fa5b44ee" }
   ],
-  "assets": { "directory": "./dist/client",
+  "assets": { "directory": "./dist/client" }
 }
