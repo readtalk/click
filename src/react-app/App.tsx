@@ -11,7 +11,6 @@ function App() {
         Authorization: `Bearer ${await auth.getToken()}`,
       },
     })
-
     setStatus(res.ok ? "success" : "error")
   }
 
