@@ -5,17 +5,27 @@ function App() {
   const auth = useAuth()
   const [status, setStatus] = useState("")
 
-  async function callApi() {    
-    const token = await auth.getToken()
-    setStatus(token ? `success token ada, user: ${auth.userId}` : "error no token")
+  async function callApi() {
+    const res = await fetch("https://click.readtalk.workers.dev", {
+      headers: {
+        Authorization: `Bearer ${await auth.getToken()}`,
+      },
+    })
+
+    setStatus(res.ok ? "success" : "error")
   }
 
-  return !auth.loaded ? <div>Loading...</div> : (
+  return !auth.loaded ? (
+    <div>Loading...</div>
+  ) : (
     <div>
       {auth.loggedIn ? (
         <div>
-          <p>Logged in {auth.userId && <>as {auth.userId}</>}</p>
-          {status && <p>API call: {status}</p>}
+          <p>
+            <span>Logged in</span>
+            {auth.userId && <span> as {auth.userId}</span>}
+          </p>
+          {status !== "" && <p>API call: {status}</p>}
           <button onClick={callApi}>Call API</button>
           <button onClick={auth.logout}>Logout</button>
         </div>
@@ -25,4 +35,5 @@ function App() {
     </div>
   )
 }
+
 export default App
