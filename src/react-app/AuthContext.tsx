@@ -1,86 +1,153 @@
-import { useRef, useState, ReactNode, useEffect, useContext, createContext } from "react"
+import {
+  useRef,
+  useState,
+  ReactNode,
+  useEffect,
+  useContext,
+  createContext,
+} from "react"
 import { createClient } from "@openauthjs/openauth/client"
-import { subjects } from "../../subjects.js" // <- tambah ini
 
-const ISSUER = "https://click.readtalk.workers.dev"
-const client = createClient({ clientID: "react", issuer: ISSUER })
+const client = createClient({
+  clientID: "react",
+  issuer: "https://click.readtalk.workers.dev",
+})
+
+interface AuthContextType {
+  userId?: string
+  loaded: boolean
+  loggedIn: boolean
+  logout: () => void
+  login: () => Promise<void>
+  getToken: () => Promise<string | undefined>
+}
+
+const AuthContext = createContext({} as AuthContextType)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const initializing = useRef(true)
   const [loaded, setLoaded] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
-  const token = useRef<string | undefined>()
-  const [userId, setUserId] = useState<string>()
+  const token = useRef<string | undefined>(undefined)
+  const [userId, setUserId] = useState<string | undefined>()
 
   useEffect(() => {
-    if (!initializing.current) return
+    const hash = new URLSearchParams(location.search.slice(1))
+    const code = hash.get("code")
+    const state = hash.get("state")
+
+    if (!initializing.current) {
+      return
+    }
+
     initializing.current = false
-    const params = new URLSearchParams(location.search)
-    const code = params.get("code")
-    const state = params.get("state")
-    if (code && state) { callback(code, state); return }
+
+    if (code && state) {
+      callback(code, state)
+      return
+    }
+
     auth()
   }, [])
 
   async function auth() {
-    try {
-      const t = await refreshTokens()
-      if (t) await user(t)
-    } finally { setLoaded(true) }
+    const token = await refreshTokens()
+
+    if (token) {
+      await user()
+    }
+
+    setLoaded(true)
   }
 
   async function refreshTokens() {
     const refresh = localStorage.getItem("refresh")
     if (!refresh) return
-    const next = await client.refresh(refresh, { access: token.current })
-    if (next.err || !next.tokens) { localStorage.removeItem("refresh"); return }
-    token.current = next.tokens.access
+    const next = await client.refresh(refresh, {
+      access: token.current,
+    })
+    if (next.err) return
+    if (!next.tokens) return token.current
+
     localStorage.setItem("refresh", next.tokens.refresh)
+    token.current = next.tokens.access
+
     return next.tokens.access
   }
 
   async function getToken() {
-    return (await refreshTokens()) || token.current
+    const token = await refreshTokens()
+
+    if (!token) {
+      await login()
+      return
+    }
+
+    return token
   }
 
   async function login() {
-    const { challenge, url } = await client.authorize(location.origin, "code", { pkce: true })
+    const { challenge, url } = await client.authorize(location.origin, "code", {
+      pkce: true,
+    })
     sessionStorage.setItem("challenge", JSON.stringify(challenge))
     location.href = url
   }
 
   async function callback(code: string, state: string) {
-    const raw = sessionStorage.getItem("challenge")
-    if (!raw) return
-    const challenge = JSON.parse(raw)
-    if (state !== challenge.state) return
-    const exchanged = await client.exchange(code, location.origin, challenge.verifier)
-    if (!exchanged.err && exchanged.tokens) {
-      token.current = exchanged.tokens.access
-      localStorage.setItem("refresh", exchanged.tokens.refresh)
+    const challenge = JSON.parse(sessionStorage.getItem("challenge")!)
+    if (code) {
+      if (state === challenge.state && challenge.verifier) {
+        const exchanged = await client.exchange(
+          code!,
+          location.origin,
+          challenge.verifier,
+        )
+        if (!exchanged.err) {
+          token.current = exchanged.tokens?.access
+          localStorage.setItem("refresh", exchanged.tokens.refresh)
+        }
+      }
+      window.location.replace("/")
     }
-    window.location.replace("/")
   }
 
-  async function user(access?: string) {
-    const t = access || token.current
-    if (!t) return
-    try {
-      // verify lokal, gak perlu fetch ke worker
-      const verified = await client.verify(subjects, t)
-      if (!verified.err) {
-        setUserId(verified.subject.properties.id)
-        setLoggedIn(true)
-      }
-    } catch {}
+  async function user() {
+    const res = await fetch("https://click.readtalk.workers.dev", {
+      headers: {
+        Authorization: `Bearer ${token.current}`,
+      },
+    })
+
+    if (res.ok) {
+      setUserId(await res.text())
+      setLoggedIn(true)
+    }
   }
 
   function logout() {
     localStorage.removeItem("refresh")
     token.current = undefined
-    location.href = "/"
+
+    window.location.replace("/")
   }
 
-  return <AuthContext.Provider value={{ login, logout, userId, loaded, loggedIn, getToken }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider
+      value={{
+        login,
+        logout,
+        userId,
+        loaded,
+        loggedIn,
+        getToken,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
 }
-export function useAuth() { return useContext(AuthContext) }
+
+export function useAuth() {
+  return useContext(AuthContext)
+}
